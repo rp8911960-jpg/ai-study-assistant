@@ -1,0 +1,126 @@
+[
+  {
+    "text": "Lightweight Conflict-Aware Document Selection for Multi-Source Retrieval-Augmented Generation D. Yashwanth Reddy1, Rajan Kumar Pandit 1, and Arthi B. 1 Department of Computing Technologies, SRM Institute of Science and Technology, Chennai, India yd6132@srmist.edu.in, rp3266@srmist.edu.in, arthib@srmist.edu.in Abstract.Multi-source Retrieval-Augmented Generation (RAG) sys- tems combining dense embeddings, sparse lexical matching, and struc- tured data introduce conflicting evidence that degrades LLM answer quality. We propose ICCR, a lightweight two-stage framework compris- ing (1) a multi-feature document classifier computing document-level support scores via semantic similarity, BM25, and length features, and (2) an example-level aggregator classifying conflict types. Evaluated on the",
+    "page": 1
+  },
+  {
+    "text": "l support scores via semantic similarity, BM25, and length features, and (2) an example-level aggregator classifying conflict types. Evaluated on the RAMDocs test set (N= 75), ICCR’s document se- lector improves Recall@1 from 77.3% to 81.3% and reduces Mislead- ing@1 from 20.0% to 9.3%. End-to-end with Llama3.1-8B, ICCR-RAG achieves 82.7% EM (+4.0 points) and 86.5% F1 (+1.6 points) over the cosine-ranked baseline. Gains are largest on ambiguous queries (81.4% vs 77.1% EM). The framework uses∼60M parameters deployable on consumer CPU (50ms/query) without LLM fine-tuning, offering a prac- tical lightweight alternative to expensive multi-agent debate systems. We transparently address class imbalance limitations and provide a replica- ble system for production-grade conflict-aware RAG.",
+    "page": 1
+  },
+  {
+    "text": "agent debate systems. We transparently address class imbalance limitations and provide a replica- ble system for production-grade conflict-aware RAG. Keywords:RAG·Document Selection·Conflict Detection·Practical Systems 1 Introduction Retrieval-Augmented Generation (RAG) enhances large language models (LLMs) with external knowledge retrieval to improve factual accuracy [1]. Production RAG systems increasingly fuse multiple retrievers: dense embeddings [2], sparse lexical matching (BM25) [3], knowledge graphs, and web APIs. While richer pools improve recall, they introduce systematic conflicts that degrade answer quality [4,5]. Three conflict types emerge in multi-source RAG: – Ambiguity:Multiple valid answers exist across sources. – Misinformation:Documents contain factual errors. –",
+    "page": 1
+  },
+  {
+    "text": "flict types emerge in multi-source RAG: – Ambiguity:Multiple valid answers exist across sources. – Misinformation:Documents contain factual errors. – Noise:Retrieved documents are topically similar but answer-irrelevant.",
+    "page": 1
+  },
+  {
+    "text": "2 D. Y. Reddy et al. Existing approaches include multi-agent debate (MADAM-RAG [6], 10–20× LLM calls) and knowledge graph construction [7]. These impose substantial la- tency overhead unsuitable for production systems. We proposeICCR: a lightweight alternative comprising: 1. A multi-feature document classifier predicting support probability from co- sine similarity, BM25, and length signals. 2. An example-level aggregator classifying conflict types from trustworthiness distributions. 1.1 Contributions 1. A practical two-stage framework combining multi-feature document ranking with conflict type classification. 2. Offline evaluation on RAMDocs showing consistent improvements over cosine ranking (Recall@1: +4.0%, Misleading@1:−10.7 points). 3. End-to-end validation with Llama3.1-8B",
+    "page": 2
+  },
+  {
+    "text": "n RAMDocs showing consistent improvements over cosine ranking (Recall@1: +4.0%, Misleading@1:−10.7 points). 3. End-to-end validation with Llama3.1-8B demonstrating modest but consis- tent gains (+4.0% EM, +1.6% F1). 4. CPU-efficient deployment (50ms/query) suitable for production systems. 5. Transparent statistical analysis including bootstrap confidence intervals, paired tests, and honest disclosure of limitations (N= 75,p= 0.58). 2 Related Work 2.1 Retrieval-Augmented Generation RAG retrieves passages and conditions LLM generation on them [1]. Multi-source fusion combines dense [2] and sparse retrievers [3]. Advanced variants include iterative retrieval [11] and self-reflection [12]. These typically assume document correctness. 2.2 Conflict Handling in RAG RAMDocs [4] introduced",
+    "page": 2
+  },
+  {
+    "text": "e iterative retrieval [11] and self-reflection [12]. These typically assume document correctness. 2.2 Conflict Handling in RAG RAMDocs [4] introduced conflict-focused QA. Asai et al. [5] categorize conflicts. MADAM-RAG [6] uses multi-agent debate. TCR [8] extracts consistency sig- nals. These address LLM-retrieval conflicts rather than multi-source selection. Our work is apreliminary studyexploring whether a lightweight, feature- based classifier can serve as a practical alternative to these heavier approaches in production settings. 2.3 Lightweight Reranking Cross-encoders [10] combine signals but treat documents equally. ICCR extends reranking with probabilistic support scores and conflict classification. Rather than claiming superiority over existing reranking methods, we present this",
+    "page": 2
+  },
+  {
+    "text": "king with probabilistic support scores and conflict classification. Rather than claiming superiority over existing reranking methods, we present this as an initial investigation into combining lightweight signals for conflict-aware selec- tion.",
+    "page": 2
+  },
+  {
+    "text": "Title Suppressed Due to Excessive Length 3 3 Methodology 3.1 Document F eatures For each documentd i, we extract three features: fi = [cos-sim(q, di),len-norm(d i),BM25-norm(q, di)]⊤ (1) Cosine similarity usesall-MiniLM-L6-v2[9]. Length normalization: len-norm(di) = min \u0012 |di| 512 ,1.0 \u0013 BM25 normalization(local min-max): BM25-norm(q, di) = BM25(q, di)−min j BM25(q, dj) maxj BM25(q, dj)−min j BM25(q, dj) +ϵ (2) 3.2 Document Classifier MLPϕ d(fi) predictsP(support|f i): ϕd(fi) = softmax(W2 ·ReLU(W 1fi +b 1) +b 2) (3) Classes:support,irrelevant,misinformation. Documents are ranked byP(support). 3.3 Conflict Aggregation From 5–6 ranked documents, we compute 13 example-level features from trust- worthiness distributions: counts, fractions, and statistics of cosine/length/BM25 scores. 3.4",
+    "page": 3
+  },
+  {
+    "text": "ments, we compute 13 example-level features from trust- worthiness distributions: counts, fractions, and statistics of cosine/length/BM25 scores. 3.4 Conflict Classifier MLPϕ c(g) predicts conflict type: ϕc(g) = softmax(W4 ·ReLU(W 3g+b 3) +b 4) (4) Classes:no-conflict,ambiguity,misinformation,noise. 4 Experiments 4.1 Setup RAMDocs test set (N= 75). Llama3.1-8B via Ollama (k= 5 documents). All models trained on RAMDocs train set (N= 600).",
+    "page": 3
+  },
+  {
+    "text": "4 D. Y. Reddy et al. T able 1.Offline ranking metrics. ICCR improves over cosine while honest about oracle gap.N= 75. Method Recall@1↑Recall@3↑Recall@5↑Misleading@1↓ Cosine (baseline) 77.3% 100.0% 100.0% 20.0% ICCR (ours) 81.3% 98.7% 100.0% 9.3% Oracle 97.3% 100.0% 100.0% 0.0% T able 2.Conflict classification. Class imbalance (70 ambiguity, 5 misinfo) limits gen- eralization.N= 75. Class Precision Recall F1 Ambiguity (N= 70) 81.4% 98.3% 89.1% Misinformation (N= 5) 80.0% 44.4% 57.1% No-conflict (N= 0) – – 0.0% Accuracy 81.3% Macro-F1 48.7% 4.2 Offline Ranking Results ICCR improves Recall@1 by 4.0 points. Misleading@1 reduction (20.0%→9.3%) is notable for production systems. Table 1 shows that ICCR achieves a Recall@1 of 81.3%, compared to 77.3% for the cosine baseline, a gain of 4.0",
+    "page": 4
+  },
+  {
+    "text": "3%) is notable for production systems. Table 1 shows that ICCR achieves a Recall@1 of 81.3%, compared to 77.3% for the cosine baseline, a gain of 4.0 percentage points on this test set (N= 75). More notably, the Misleading@1 metric drops from 20.0% to 9.3%, indicating that ICCR surfaces a misleading document as the top result roughly half as often as the cosine baseline. Recall@3 and Recall@5 remain comparable across both methods, suggesting the improvement is concentrated at the top rank rather than affecting overall retrieval coverage. The oracle upper bound of 97.3% Recall@1 highlights that a meaningful gap remains between ICCR and an ideal selector, and results on this small test set should be interpreted with appropriate caution. 4.3 Conflict Classification Strong ambiguity detection",
+    "page": 4
+  },
+  {
+    "text": "l selector, and results on this small test set should be interpreted with appropriate caution. 4.3 Conflict Classification Strong ambiguity detection (F1=89.1%). Misinformation F1=57.1% limited by N= 5 examples. Table 2 presents per-class conflict classification results. The classifier performs well on the ambiguity class (F1=89.1%), which is expected given that 70 of the 75 test examples belong to this class. The misinformation class, with only 5 ex- amples, yields an F1 of 57.1% and a recall of 44.4%, meaning the classifier misses more than half of misinformation cases in this small sample; these figures should not be generalised given the severe class imbalance. The no-conflict class has zero positive examples in the test set, so no meaningful metric can be reported for it. The overall",
+    "page": 4
+  },
+  {
+    "text": "severe class imbalance. The no-conflict class has zero positive examples in the test set, so no meaningful metric can be reported for it. The overall accuracy of 81.3% is largely driven by the dominant ambiguity",
+    "page": 4
+  },
+  {
+    "text": "Title Suppressed Due to Excessive Length 5 T able 3.End-to-end results (Llama3.1-8B,k= 5,N= 75). Modest consistent gains. Not statistically significant (p= 0.58). Method EM↑F1↑ No-RAG 26.7% 31.2% Vanilla RAG (cosine) 78.7% 84.9% ICCR-RAG (ours) 82.7% 86.5% T able 4.Bootstrap 95% confidence intervals (1000 resamples,N= 75). Quantifies uncertainty. Method Metric Mean 95% CI ICCR-RAG EM 82.7% [73.3%, 90.7%] ICCR-RAG F1 86.5% [80.4%, 91.9%] Vanilla RAG EM 78.7% [70.3%, 86.4%] Vanilla RAG F1 84.9% [78.7%, 90.5%] class, and the macro-F1 of 48.7% better reflects the uneven performance across classes. 4.4 End-to-End LLM Results Table 3 reports end-to-end question answering performance with Llama3.1-8B as the generator. Without any retrieval, the model achieves only 26.7% EM and 31.2% F1,",
+    "page": 5
+  },
+  {
+    "text": "ts end-to-end question answering performance with Llama3.1-8B as the generator. Without any retrieval, the model achieves only 26.7% EM and 31.2% F1, underscoring the value of retrieval augmentation on this dataset. The cosine-ranked vanilla RAG baseline improves this substantially to 78.7% EM and 84.9% F1. ICCR-RAG achieves 82.7% EM and 86.5% F1, representing gains of 4.0 and 1.6 points respectively over the baseline. These gains are modest and, as noted in Section 4.6, are not statistically significant atp= 0.05 given the test set size. The results are therefore best interpreted as a directional signal rather than a definitive performance claim. 4.5 Bootstrap Confidence Intervals Table 4 reports 95% confidence intervals estimated via 1000 bootstrap resamples. The confidence intervals for",
+    "page": 5
+  },
+  {
+    "text": "aim. 4.5 Bootstrap Confidence Intervals Table 4 reports 95% confidence intervals estimated via 1000 bootstrap resamples. The confidence intervals for ICCR-RAG and Vanilla RAG overlap substantially on both EM ([73.3%, 90.7%] vs. [70.3%, 86.4%]) and F1 ([80.4%, 91.9%] vs. [78.7%, 90.5%]), which is consistent with the non-significant paired test results. The wide intervals reflect the limited test set size ofN= 75 and caution against strong conclusions from the point estimates alone. These intervals are provided to quantify uncertainty rather than to claim that ICCR-RAG is definitively superior.",
+    "page": 5
+  },
+  {
+    "text": "6 D. Y. Reddy et al. T able 5.Paired significance tests. Not significant (p >0.05). Small effect sizes. Test Statisticp-value Pairedt-test (F1)t= 0.553 0.582 Pairedt-test (EM)t= 1.359 0.182 Wilcoxon (F1)W= 1347.5 0.864 Wilcoxon (EM)W= 1235.5 0.180 Cohen’sd(F1) 0.064 (small) – Cohen’sd(EM) 0.226 (small) – T able 6.Results by conflict type. Gains concentrated in ambiguity (N= 70).N= 75 total. TypeNVanilla EM ICCR EM∆EM∆F1 Ambiguity 70 77.1% 81.4% +4.3% +2.9% Misinformation 5 100.0% 100.0% 0.0%−16.7% 4.6 Statistical Significance Results are not statistically significant (p >0.05). Cohen’sdindicates small effects.N= 75 limits power. Table 5 presents paired significance tests comparing ICCR-RAG and Vanilla RAG across all 75 test examples. Both pairedt-tests and non-parametric Wilcoxon",
+    "page": 6
+  },
+  {
+    "text": "e 5 presents paired significance tests comparing ICCR-RAG and Vanilla RAG across all 75 test examples. Both pairedt-tests and non-parametric Wilcoxon signed-rank tests yieldp-values well above 0.05 for both EM and F1, indicat- ing that the observed differences are not statistically significant at conventional thresholds. Cohen’sdvalues of 0.064 (F1) and 0.226 (EM) correspond to small effect sizes. These results do not mean ICCR offers no benefit, but they do mean that the current evidence from this test set is insufficient to confirm the observed gains are not due to sampling variation. A larger evaluation set would be needed to draw firmer conclusions. 4.7 Stratified Analysis Gains are concentrated on ambiguous queries. The misinformation slice is too small (N= 5) for reliable analysis.",
+    "page": 6
+  },
+  {
+    "text": "conclusions. 4.7 Stratified Analysis Gains are concentrated on ambiguous queries. The misinformation slice is too small (N= 5) for reliable analysis. Table 6 breaks down performance by conflict type. On the ambiguity slice (N= 70), ICCR-RAG improves EM by 4.3 points (77.1%→81.4%) and F1 by 2.9 points, suggesting that the document re-ranking is most useful when multiple plausible answers compete across sources. On the misinformation slice (N= 5), both methods achieve 100% EM, so there is no EM difference; however, ICCR-RAG shows a−16.7% F1 delta, indicating a regression on this tiny slice. Given only 5 examples, this figure is highly sensitive to individual instances and should not be over-interpreted. Reliable conclusions about misinformation handling would require a much larger and more",
+    "page": 6
+  },
+  {
+    "text": "e to individual instances and should not be over-interpreted. Reliable conclusions about misinformation handling would require a much larger and more balanced evaluation set.",
+    "page": 6
+  },
+  {
+    "text": "Title Suppressed Due to Excessive Length 7 4.8 Error Analysis Qualitative wins on ambiguity where vanilla RAG lists all candidates. T able 7.Error analysis summary. Big wins 12% of test set.N= 75. CategoryN% of test set Big wins (∆F1>0.2) 9 12.0% Big losses (∆F1<−0.2) 5 6.7% No change (|∆F1| ≤0.2) 61 81.3% Table 7 summarises the distribution of per-example F1 changes between ICCR- RAG and Vanilla RAG. For the majority of examples (61 out of 75, 81.3%), the two systems produce comparable outputs with|∆F1| ≤0.2. ICCR-RAG shows notable improvements (∆F1>0.2) on 9 examples (12.0% of the test set) and notable regressions on 5 examples (6.7%). The fact that wins outnumber losses in this analysis is a positive signal, though the overall magnitude of change is limited and the test set is small.",
+    "page": 7
+  },
+  {
+    "text": "e fact that wins outnumber losses in this analysis is a positive signal, though the overall magnitude of change is limited and the test set is small. Cases of big loss warrant further investigation to understand when ICCR’s re-ranking introduces errors. T able 8.Top ICCR wins (∆F1>0.2). Question Vanilla F1 ICCR F1∆F1 When did George Horner die? 0.50 1.00 +0.50 Artist of “Something for Everybody”? 0.57 1.00 +0.43 Composer of Symphony No. 38? 0.60 1.00 +0.40 Table 8 illustrates three representative examples where ICCR-RAG achieves large F1 improvements over the baseline. In each case, vanilla RAG returns a partial or incorrect answer (F1 in the range 0.50–0.60), while ICCR-RAG recov- ers the fully correct answer (F1=1.00). These examples are factual, unambiguous queries where the correct",
+    "page": 7
+  },
+  {
+    "text": "the range 0.50–0.60), while ICCR-RAG recov- ers the fully correct answer (F1=1.00). These examples are factual, unambiguous queries where the correct source document appears to have been ranked higher by ICCR’s support classifier than by cosine similarity alone. It should be noted that these are cherry-picked best cases; the typical improvement across the test set is much smaller, and these examples are not representative of average system behaviour. 4.9 Computational Efficiency ICCR adds 20ms overhead versus cosine but enables 100×faster inference than multi-agent systems.",
+    "page": 7
+  },
+  {
+    "text": "8 D. Y. Reddy et al. T able 9.Computational cost. ICCR adds modest overhead vs. 100×speedup vs. multi- agent. System Per Query Memory LLM Calls Status Cosine baseline 30ms 0.5GB 1 Measured ICCR (ours) 50ms 2.5GB 1 Measured MADAM-RAG 5–10s 8GB+ 5–10 Literature Table 9 compares the per-query computational cost of the three systems. The cosine baseline processes a query in approximately 30ms using 0.5GB of memory. ICCR adds a modest 20ms overhead, bringing total query time to 50ms while requiring 2.5GB of memory — an increase attributable to loading the MiniLM encoder and BM25 index alongside the classifier. Both systems make a single LLM call per query. In contrast, MADAM-RAG requires 5–10 LLM calls and 5–10 seconds per query according to reported figures in the literature, making it roughly",
+    "page": 8
+  },
+  {
+    "text": "r query. In contrast, MADAM-RAG requires 5–10 LLM calls and 5–10 seconds per query according to reported figures in the literature, making it roughly 100–200×slower than ICCR. ICCR’s latency and memory footprint are compatible with consumer-grade hardware and single-GPU or CPU-only deployment, which is a practical advantage in resource-constrained settings. 5 Discussion 5.1 Practical V alue 1. Misleading@1 reduction (20%→9.3%) directly reduces hallucination risk in the tested setting. 2. CPU-efficient: 50ms/query on 24GB RAM. 3. Interpretable:P support enables routing (escalate high-misinfo queries). 4. No LLM tuning: off-the-shelf Llama3.1-8B. 5.2 Limitations 1.Statistical power:p= 0.58 (not significant);N= 75 limits detection. 2.Class imbalance:N= 5 misinformation; generalization unclear.",
+    "page": 8
+  },
+  {
+    "text": ". 5.2 Limitations 1.Statistical power:p= 0.58 (not significant);N= 75 limits detection. 2.Class imbalance:N= 5 misinformation; generalization unclear. 3.Small dataset:N= 75 test examples. 4.No-conflict F1=0:Zero positive examples in test set. 5.Local BM25:Ignores global corpus structure. 5.3 When to Use ICCR Good fit:Production RAG systems with latency constraints. Poor fit:Research validation requiring statistical significance.",
+    "page": 8
+  },
+  {
+    "text": "Title Suppressed Due to Excessive Length 9 6 Conclusion ICCR provides a lightweight, preliminary framework for conflict-aware document selection in multi-source RAG. Evaluated on RAMDocs (N= 75), it achieves +4.0% EM and reduces misleading top-1 documents by 50% relative to a co- sine baseline. It is CPU-deployable (50ms/query) with interpretable confidence signals. While results are not statistically significant (p= 0.58) and are constrained to 75 test examples, the Misleading@1 reduction and computational efficiency suggest ICCR is worth further investigation for production systems. We present these findings as a preliminary study and recommend evaluation on larger, more diverse datasets before drawing broader conclusions. Acknowledgments Compute provided by [institution]. RAMDocs",
+    "page": 9
+  },
+  {
+    "text": "recommend evaluation on larger, more diverse datasets before drawing broader conclusions. Acknowledgments Compute provided by [institution]. RAMDocs dataset by Wang et al. [4]. References 1. Lewis, P., et al.: Retrieval-augmented generation for knowledge-intensive NLP tasks. In: NeurIPS (2020) 2. Izacard, G., et al.: Contriever: Efficient open domain document retrieval with trans- formers. In: EMNLP (2021) 3. Robertson, S., Zaragoza, H.: The probabilistic relevance framework: BM25 and beyond. Foundations and Trends in IR 3(4), 333–389 (2009) 4. Wang, H., et al.: RAMDocs: Retrieval with Ambiguity and Misinformation. arXiv:2504.13079 (2025) 5. Asai, A., et al.: Retrieval-Augmented Generation with Conflicting Evidence. arXiv:2504.13079 (2025) 6. Prasad, A., et al.: MADAM-RAG: Multi-Agent",
+    "page": 9
+  },
+  {
+    "text": "5. Asai, A., et al.: Retrieval-Augmented Generation with Conflicting Evidence. arXiv:2504.13079 (2025) 6. Prasad, A., et al.: MADAM-RAG: Multi-Agent Debate for RAG. Preprint (2025) 7. Anon.: Truthful RAG with Knowledge Graphs. arXiv:2505.12345 (2025) 8. Anon.: Transparent Conflict Resolution in RAG. arXiv:2601.06842 (2026) 9. Reimers, N., Gurevych, I.: Sentence-BERT: Sentence embeddings using siamese BERT-networks. In: EMNLP (2019) 10. Nogueira, R., Cho, K.: Passage re-ranking with BERT. arXiv:1901.04085 (2019) 11. Jiang, Z., et al.: Active retrieval augmented generation. In: EMNLP (2023) 12. Asai, A., et al.: Self-RAG: Learning to retrieve, generate, and critique through self-reflection. arXiv:2310.11511 (2023)",
+    "page": 9
+  },
+  {
+    "text": "generate, and critique through self-reflection. arXiv:2310.11511 (2023)",
+    "page": 9
+  }
+]
